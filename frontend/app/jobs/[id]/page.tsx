@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { 
-  getJob, 
-  getResumes, 
-  uploadResume, 
+import {
+  getJob,
+  getResumes,
+  uploadResume,
   getJobDashboard,
   updateBucket,
   sendScreeningForm,
+  deleteResume,
   Job,
   ResumeWithAnalysis,
   JobDashboard,
@@ -102,6 +103,18 @@ export default function JobDetailPage() {
       await loadData();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to send screening form');
+    }
+  }
+
+  async function handleDeleteResume(resumeId: number) {
+    const confirmed = window.confirm('Are you sure you want to delete this resume? This action cannot be undone.');
+    if (!confirmed) return;
+
+    try {
+      await deleteResume(resumeId);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete resume');
     }
   }
 
@@ -284,6 +297,7 @@ export default function JobDetailPage() {
                 resume={item}
                 onBucketChange={handleBucketChange}
                 onSendScreeningForm={handleSendScreeningForm}
+                onDeleteResume={handleDeleteResume}
               />
             ))}
           </div>
@@ -297,10 +311,12 @@ function ResumeCard({
   resume,
   onBucketChange,
   onSendScreeningForm,
+  onDeleteResume,
 }: {
   resume: ResumeWithAnalysis;
   onBucketChange: (resumeId: number, bucket: BucketType) => void;
   onSendScreeningForm: (resumeId: number) => void;
+  onDeleteResume: (resumeId: number) => void;
 }) {
   const getBucketBadgeClass = (bucket: string) => {
     switch (bucket) {
@@ -432,9 +448,9 @@ function ResumeCard({
       )}
 
       {/* Actions */}
-      <div style={{ 
-        marginTop: '1rem', 
-        paddingTop: '1rem', 
+      <div style={{
+        marginTop: '1rem',
+        paddingTop: '1rem',
         borderTop: '1px solid #e5e7eb',
         display: 'flex',
         gap: '0.5rem',
@@ -446,15 +462,15 @@ function ResumeCard({
           onClick={() => onSendScreeningForm(resume.resume.id)}
           disabled={resume.email_status?.status === 'SENT' || resume.email_status?.status === 'RESPONSE_RECEIVED'}
         >
-          {resume.email_status?.status === 'SENT' || resume.email_status?.status === 'RESPONSE_RECEIVED' 
-            ? 'Screening Form Sent' 
+          {resume.email_status?.status === 'SENT' || resume.email_status?.status === 'RESPONSE_RECEIVED'
+            ? 'Screening Form Sent'
             : 'Send Screening Form'}
         </button>
-        
+
         <select
           value={resume.resume.bucket}
           onChange={(e) => onBucketChange(resume.resume.id, e.target.value as BucketType)}
-          style={{ 
+          style={{
             padding: '0.5rem 1rem',
             border: '1px solid #d1d5db',
             borderRadius: '0.5rem',
@@ -466,6 +482,14 @@ function ResumeCard({
           <option value="POTENTIAL">Potential</option>
           <option value="REJECT">Reject</option>
         </select>
+
+        <button
+          className="btn btn-danger"
+          style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+          onClick={() => onDeleteResume(resume.resume.id)}
+        >
+          🗑️ Delete
+        </button>
       </div>
 
       {resume.email_status && resume.email_status.status !== 'NOT_SENT' && (
