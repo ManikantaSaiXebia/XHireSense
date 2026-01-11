@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from app.models.resume import BucketType, EmailStatusEnum
 
 class ResumeUpload(BaseModel):
@@ -32,6 +32,13 @@ class ResumeWithAnalysis(BaseModel):
     resume: ResumeResponse
     analysis: Optional[ResumeAnalysisResponse] = None
     email_status: Optional["EmailStatusResponse"] = None
+
+    class Config:
+        from_attributes = True
+
+class ResumeBatchUploadResponse(BaseModel):
+    uploaded: List[ResumeWithAnalysis]
+    failed: List[dict]  # List of {"filename": str, "error": str}
 
     class Config:
         from_attributes = True

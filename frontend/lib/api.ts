@@ -42,6 +42,11 @@ export interface ResumeWithAnalysis {
   email_status: EmailStatus | null;
 }
 
+export interface ResumeBatchUploadResponse {
+  uploaded: ResumeWithAnalysis[];
+  failed: Array<{ filename: string; error: string }>;
+}
+
 export interface JobDashboard {
   job_id: number;
   total_resumes: number;
@@ -122,17 +127,40 @@ export async function uploadResume(
   const formData = new FormData();
   formData.append('file', file);
   formData.append('job_id', jobId.toString());
-  
+
   const response = await fetch(`${API_URL}/api/resumes/upload`, {
     method: 'POST',
     body: formData,
   });
-  
+
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.detail || 'Failed to upload resume');
   }
-  
+
+  return response.json();
+}
+
+export async function uploadResumes(
+  jobId: number,
+  files: FileList | File[]
+): Promise<ResumeBatchUploadResponse> {
+  const formData = new FormData();
+  for (let i = 0; i < files.length; i++) {
+    formData.append('files', files[i]);
+  }
+  formData.append('job_id', jobId.toString());
+
+  const response = await fetch(`${API_URL}/api/resumes/upload`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to upload resumes');
+  }
+
   return response.json();
 }
 

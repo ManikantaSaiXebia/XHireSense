@@ -6,6 +6,7 @@ import {
   getJob,
   getResumes,
   uploadResume,
+  uploadResumes,
   getJobDashboard,
   updateBucket,
   sendScreeningForm,
@@ -13,7 +14,8 @@ import {
   Job,
   ResumeWithAnalysis,
   JobDashboard,
-  BucketType
+  BucketType,
+  ResumeBatchUploadResponse
 } from '@/lib/api';
 import ReactMarkdown from 'react-markdown';
 import Link from 'next/link';
@@ -33,6 +35,7 @@ export default function JobDetailPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [uploadResults, setUploadResults] = useState<ResumeBatchUploadResponse | null>(null);
 
   useEffect(() => {
     if (jobId) {
@@ -62,22 +65,37 @@ export default function JobDetailPage() {
   }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    if (!file.name.toLowerCase().endsWith('.pdf')) {
-      setError('Only PDF files are allowed');
-      return;
+    // Validate all files are PDFs
+    for (let i = 0; i < files.length; i++) {
+      if (!files[i].name.toLowerCase().endsWith('.pdf')) {
+        setError('Only PDF files are allowed');
+        return;
+      }
     }
 
     try {
       setUploading(true);
       setError(null);
-      await uploadResume(jobId, file);
+      setUploadResults(null);
+
+      const result = await uploadResumes(jobId, files);
+      setUploadResults(result);
+
+      // Show success/error messages
+      if (result.uploaded.length > 0) {
+        setError(null); // Clear any previous errors
+      }
+      if (result.failed.length > 0) {
+        setError(`Failed to upload ${result.failed.length} file(s): ${result.failed.map(f => f.filename).join(', ')}`);
+      }
+
       setShowUpload(false);
       await loadData();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload resume');
+      setError(err instanceof Error ? err.message : 'Failed to upload resumes');
     } finally {
       setUploading(false);
       // Reset file input
@@ -231,12 +249,13 @@ export default function JobDetailPage() {
             marginBottom: '1rem'
           }}>
             <label htmlFor="resume-upload" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-              Select PDF file:
+              Select PDF files (multiple allowed):
             </label>
             <input
               id="resume-upload"
               type="file"
               accept=".pdf"
+              multiple
               onChange={handleFileUpload}
               disabled={uploading}
               style={{ marginBottom: '1rem' }}
