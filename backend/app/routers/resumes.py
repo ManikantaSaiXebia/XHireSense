@@ -9,7 +9,7 @@ from app.models.job import Job
 from app.models.resume import Resume, ResumeAnalysis, EmailStatus, BucketType, EmailStatusEnum
 from app.schemas.resume import (
     ResumeWithAnalysis, EmailStatusUpdate, EmailStatusResponse,
-    ResumeResponse, ResumeAnalysisResponse
+    ResumeResponse, ResumeAnalysisResponse, ResumeBatchUploadResponse
 )
 from app.services.pdf_service import PDFService
 from app.services.ai_service import AIService
@@ -59,134 +59,149 @@ def assign_bucket(match_percentage: float) -> BucketType:
     else:
         return BucketType.REJECT
 
-@router.post("/upload", response_model=ResumeWithAnalysis, status_code=status.HTTP_201_CREATED)
+@router.post("/upload", response_model=ResumeBatchUploadResponse, status_code=status.HTTP_201_CREATED)
 async def upload_resume(
     job_id: int = Form(...),
-    file: UploadFile = File(...),
+    files: List[UploadFile] = File(...),
     db: Session = Depends(get_db)
 ):
-    """Upload and analyze a resume"""
-    debug_print(f"DEBUG: Upload endpoint called - job_id: {job_id}, filename: {file.filename}")
-    # Validate file type
-    if not file.filename.lower().endswith('.pdf'):
-        debug_print(f"DEBUG: Invalid file type - {file.filename}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only PDF files are allowed"
-        )
-    
+    """Upload and analyze multiple resumes"""
+    debug_print(f"DEBUG: Upload endpoint called - job_id: {job_id}, files count: {len(files)}")
+
     # Validate job exists
     job = db.query(Job).filter(Job.id == job_id).first()
     if not job:
         debug_print(f"DEBUG: Job not found - job_id: {job_id}")
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     debug_print(f"DEBUG: Job found - {job.title}")
-    
-    # Read file content
-    file_content = await file.read()
-    debug_print(f"DEBUG: File read - size: {len(file_content)} bytes")
-    
-    # Extract text from PDF
-    extracted_text = pdf_service.extract_text_from_pdf(file_content)
-    debug_print(f"DEBUG: Extracted text length: {len(extracted_text) if extracted_text else 0}")
-    if not extracted_text:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Failed to extract text from PDF"
-        )
 
-    # Create resume record (initially in REJECT bucket, will update after analysis)
-    debug_print("DEBUG: Creating resume record in database...")
-    db_resume = Resume(
-        job_id=job_id,
-        filename=file.filename,
-        extracted_text=extracted_text,
-        bucket=BucketType.REJECT
-    )
-    db.add(db_resume)
-    db.commit()
-    db.refresh(db_resume)
-    debug_print(f"DEBUG: Resume record created - id: {db_resume.id}")
-    
-    # Analyze resume with AI
-    analysis_result = None
-    current_ai_service = get_ai_service()
-    debug_print(f"DEBUG: ai_service is {'available' if current_ai_service else 'None'}")
-    if current_ai_service:
+    uploaded = []
+    failed = []
+
+    for file in files:
         try:
-            debug_print("DEBUG: Starting AI analysis...")
-            match_result = current_ai_service.analyze_resume_match(extracted_text, job.description)
-            debug_print(f"DEBUG: AI analysis result: {match_result}")
-            if match_result:
-                # Assign bucket based on match percentage
-                bucket = assign_bucket(match_result.match_percentage)
-                debug_print(f"DEBUG: Assigned bucket: {bucket}")
-                db_resume.bucket = bucket
+            debug_print(f"DEBUG: Processing file - {file.filename}")
 
-                # Create analysis record
-                db_analysis = ResumeAnalysis(
-                    resume_id=db_resume.id,
-                    match_percentage=match_result.match_percentage,
-                    matched_skills=json.dumps(match_result.matched_skills),
-                    missing_skills=json.dumps(match_result.missing_skills),
-                    bonus_skills=json.dumps(match_result.bonus_skills),
-                    reasoning=match_result.reasoning
-                )
-                db.add(db_analysis)
-                # Commit both bucket update and analysis
-                db.commit()
-                db.refresh(db_resume)
-                db.refresh(db_analysis)
-                analysis_result = db_analysis
-                debug_print("DEBUG: Analysis record created successfully")
+            # Validate file type
+            if not file.filename.lower().endswith('.pdf'):
+                debug_print(f"DEBUG: Invalid file type - {file.filename}")
+                failed.append({"filename": file.filename, "error": "Only PDF files are allowed"})
+                continue
+
+            # Read file content
+            file_content = await file.read()
+            debug_print(f"DEBUG: File read - size: {len(file_content)} bytes")
+
+            # Extract text from PDF
+            extracted_text = pdf_service.extract_text_from_pdf(file_content)
+            debug_print(f"DEBUG: Extracted text length: {len(extracted_text) if extracted_text else 0}")
+            if not extracted_text:
+                failed.append({"filename": file.filename, "error": "Failed to extract text from PDF"})
+                continue
+
+            # Create resume record (initially in REJECT bucket, will update after analysis)
+            debug_print("DEBUG: Creating resume record in database...")
+            db_resume = Resume(
+                job_id=job_id,
+                filename=file.filename,
+                extracted_text=extracted_text,
+                bucket=BucketType.REJECT
+            )
+            db.add(db_resume)
+            db.commit()
+            db.refresh(db_resume)
+            debug_print(f"DEBUG: Resume record created - id: {db_resume.id}")
+
+            # Analyze resume with AI
+            analysis_result = None
+            current_ai_service = get_ai_service()
+            debug_print(f"DEBUG: ai_service is {'available' if current_ai_service else 'None'}")
+            if current_ai_service:
+                try:
+                    debug_print("DEBUG: Starting AI analysis...")
+                    match_result = current_ai_service.analyze_resume_match(extracted_text, job.description)
+                    debug_print(f"DEBUG: AI analysis result: {match_result}")
+                    if match_result:
+                        # Assign bucket based on match percentage
+                        bucket = assign_bucket(match_result.match_percentage)
+                        debug_print(f"DEBUG: Assigned bucket: {bucket}")
+                        db_resume.bucket = bucket
+
+                        # Create analysis record
+                        db_analysis = ResumeAnalysis(
+                            resume_id=db_resume.id,
+                            match_percentage=match_result.match_percentage,
+                            matched_skills=json.dumps(match_result.matched_skills),
+                            missing_skills=json.dumps(match_result.missing_skills),
+                            bonus_skills=json.dumps(match_result.bonus_skills),
+                            reasoning=match_result.reasoning
+                        )
+                        db.add(db_analysis)
+                        # Commit both bucket update and analysis
+                        db.commit()
+                        db.refresh(db_resume)
+                        db.refresh(db_analysis)
+                        analysis_result = db_analysis
+                        debug_print("DEBUG: Analysis record created successfully")
+                    else:
+                        debug_print("DEBUG: AI analysis returned None")
+                except Exception as e:
+                    debug_print(f"ERROR in AI analysis: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    # Continue without analysis if AI fails
             else:
-                debug_print("DEBUG: AI analysis returned None")
+                debug_print("WARNING: GEMINI_API_KEY not set, skipping AI analysis")
+
+            # Create email status record
+            db_email_status = EmailStatus(resume_id=db_resume.id)
+            db.add(db_email_status)
+            db.commit()
+            db.refresh(db_email_status)
+
+            db.refresh(db_resume)
+
+            # Parse analysis skills if available
+            analysis_response = None
+            if analysis_result:
+                analysis_response = ResumeAnalysisResponse(
+                    id=analysis_result.id,
+                    match_percentage=analysis_result.match_percentage,
+                    matched_skills=json.loads(analysis_result.matched_skills),
+                    missing_skills=json.loads(analysis_result.missing_skills),
+                    bonus_skills=json.loads(analysis_result.bonus_skills),
+                    reasoning=analysis_result.reasoning,
+                    created_at=analysis_result.created_at
+                )
+
+            uploaded.append(ResumeWithAnalysis(
+                resume=ResumeResponse(
+                    id=db_resume.id,
+                    job_id=db_resume.job_id,
+                    filename=db_resume.filename,
+                    bucket=db_resume.bucket,
+                    uploaded_at=db_resume.uploaded_at
+                ),
+                analysis=analysis_response,
+                email_status=EmailStatusResponse(
+                    id=db_email_status.id,
+                    status=db_email_status.status,
+                    form_link=db_email_status.form_link,
+                    sent_at=db_email_status.sent_at,
+                    response_received_at=db_email_status.response_received_at
+                )
+            ))
+
         except Exception as e:
-            debug_print(f"ERROR in AI analysis: {e}")
-            import traceback
-            traceback.print_exc()
-            # Continue without analysis if AI fails
-    else:
-        debug_print("WARNING: GEMINI_API_KEY not set, skipping AI analysis")
-    
-    # Create email status record
-    db_email_status = EmailStatus(resume_id=db_resume.id)
-    db.add(db_email_status)
-    db.commit()
-    db.refresh(db_email_status)
-    
-    db.refresh(db_resume)
-    
-    # Parse analysis skills if available
-    analysis_response = None
-    if analysis_result:
-        analysis_response = ResumeAnalysisResponse(
-            id=analysis_result.id,
-            match_percentage=analysis_result.match_percentage,
-            matched_skills=json.loads(analysis_result.matched_skills),
-            missing_skills=json.loads(analysis_result.missing_skills),
-            bonus_skills=json.loads(analysis_result.bonus_skills),
-            reasoning=analysis_result.reasoning,
-            created_at=analysis_result.created_at
-        )
-    
-    return ResumeWithAnalysis(
-        resume=ResumeResponse(
-            id=db_resume.id,
-            job_id=db_resume.job_id,
-            filename=db_resume.filename,
-            bucket=db_resume.bucket,
-            uploaded_at=db_resume.uploaded_at
-        ),
-        analysis=analysis_response,
-        email_status=EmailStatusResponse(
-            id=db_email_status.id,
-            status=db_email_status.status,
-            form_link=db_email_status.form_link,
-            sent_at=db_email_status.sent_at,
-            response_received_at=db_email_status.response_received_at
-        )
+            debug_print(f"ERROR processing file {file.filename}: {e}")
+            failed.append({"filename": file.filename, "error": str(e)})
+
+    debug_print(f"DEBUG: Upload complete - uploaded: {len(uploaded)}, failed: {len(failed)}")
+
+    return ResumeBatchUploadResponse(
+        uploaded=uploaded,
+        failed=failed
     )
 
 @router.get("/job/{job_id}", response_model=List[ResumeWithAnalysis])
