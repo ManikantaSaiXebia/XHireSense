@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 # Configure Gemini API
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+print("GEMINI_API_KEY loaded:", GEMINI_API_KEY, flush=True)
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
@@ -22,7 +23,8 @@ class AIService:
     def __init__(self):
         if not GEMINI_API_KEY:
             raise ValueError("GEMINI_API_KEY environment variable is not set")
-        self.model = genai.GenerativeModel('gemini-pro')
+        # Use gemini-pro model (stable and widely available)
+        self.model = genai.GenerativeModel('gemini-2.5-flash')
     
     def analyze_resume_match(
         self, 

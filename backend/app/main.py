@@ -1,11 +1,25 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from app.database import init_db
-from app.routers import jobs, resumes
+import logging
 
 # Load environment variables from .env file
 load_dotenv()
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from app.database import init_db
+from app.routers import jobs, resumes
+
+# Test AI service initialization
+from app.services.ai_service import AIService
+try:
+    ai_service = AIService()
+    print("DEBUG: AI service initialized successfully", flush=True)
+except Exception as e:
+    print(f"DEBUG: AI service initialization failed: {e}", flush=True)
 
 app = FastAPI(
     title="XHireSense API",

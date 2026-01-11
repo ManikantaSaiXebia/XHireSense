@@ -1,4 +1,5 @@
 import json
+import sys
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status, Form
 from sqlalchemy.orm import Session
@@ -15,11 +16,39 @@ from app.services.ai_service import AIService
 from app.services.email_service import EmailService
 import os
 
+# Force immediate output
+def debug_print(msg):
+    print(msg, flush=True)
+    sys.stdout.flush()
+
 router = APIRouter(prefix="/api/resumes", tags=["resumes"])
 
 pdf_service = PDFService()
-ai_service = AIService() if os.getenv("GEMINI_API_KEY") else None
+
+# AI service will be initialized lazily when needed
+# This avoids issues with environment variable loading order
+ai_service = None
+
+def get_ai_service():
+    """Lazy initialization of AI service"""
+    global ai_service
+    if ai_service is None:
+        try:
+            gemini_key = os.getenv("GEMINI_API_KEY")
+            if gemini_key:
+                debug_print(f"DEBUG: GEMINI_API_KEY found (length: {len(gemini_key)}), initializing AIService...")
+                ai_service = AIService()
+                debug_print("DEBUG: AIService initialized successfully")
+            else:
+                debug_print("DEBUG: GEMINI_API_KEY not found, ai_service will be None")
+        except Exception as e:
+            debug_print(f"DEBUG: Error initializing AIService: {e}")
+            import traceback
+            traceback.print_exc()
+    return ai_service
+
 email_service = EmailService()
+debug_print("DEBUG: Resume router module loaded")
 
 def assign_bucket(match_percentage: float) -> BucketType:
     """Assign resume to bucket based on match percentage"""
@@ -37,8 +66,10 @@ async def upload_resume(
     db: Session = Depends(get_db)
 ):
     """Upload and analyze a resume"""
+    debug_print(f"DEBUG: Upload endpoint called - job_id: {job_id}, filename: {file.filename}")
     # Validate file type
     if not file.filename.lower().endswith('.pdf'):
+        debug_print(f"DEBUG: Invalid file type - {file.filename}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Only PDF files are allowed"
@@ -47,13 +78,18 @@ async def upload_resume(
     # Validate job exists
     job = db.query(Job).filter(Job.id == job_id).first()
     if not job:
+        debug_print(f"DEBUG: Job not found - job_id: {job_id}")
         raise HTTPException(status_code=404, detail="Job not found")
+    
+    debug_print(f"DEBUG: Job found - {job.title}")
     
     # Read file content
     file_content = await file.read()
+    debug_print(f"DEBUG: File read - size: {len(file_content)} bytes")
     
     # Extract text from PDF
     extracted_text = pdf_service.extract_text_from_pdf(file_content)
+    debug_print(f"DEBUG: Extracted text length: {len(extracted_text) if extracted_text else 0}")
     if not extracted_text:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -61,6 +97,7 @@ async def upload_resume(
         )
     
     # Create resume record (initially in REJECT bucket, will update after analysis)
+    debug_print("DEBUG: Creating resume record in database...")
     db_resume = Resume(
         job_id=job_id,
         filename=file.filename,
@@ -70,17 +107,23 @@ async def upload_resume(
     db.add(db_resume)
     db.commit()
     db.refresh(db_resume)
+    debug_print(f"DEBUG: Resume record created - id: {db_resume.id}")
     
     # Analyze resume with AI
     analysis_result = None
-    if ai_service:
+    current_ai_service = get_ai_service()
+    debug_print(f"DEBUG: ai_service is {'available' if current_ai_service else 'None'}")
+    if current_ai_service:
         try:
-            match_result = ai_service.analyze_resume_match(extracted_text, job.description)
+            debug_print("DEBUG: Starting AI analysis...")
+            match_result = current_ai_service.analyze_resume_match(extracted_text, job.description)
+            debug_print(f"DEBUG: AI analysis result: {match_result}")
             if match_result:
                 # Assign bucket based on match percentage
                 bucket = assign_bucket(match_result.match_percentage)
+                debug_print(f"DEBUG: Assigned bucket: {bucket}")
                 db_resume.bucket = bucket
-                
+
                 # Create analysis record
                 db_analysis = ResumeAnalysis(
                     resume_id=db_resume.id,
@@ -96,11 +139,16 @@ async def upload_resume(
                 db.refresh(db_resume)
                 db.refresh(db_analysis)
                 analysis_result = db_analysis
+                debug_print("DEBUG: Analysis record created successfully")
+            else:
+                debug_print("DEBUG: AI analysis returned None")
         except Exception as e:
-            print(f"Error in AI analysis: {e}")
+            debug_print(f"ERROR in AI analysis: {e}")
+            import traceback
+            traceback.print_exc()
             # Continue without analysis if AI fails
     else:
-        print("Warning: GEMINI_API_KEY not set, skipping AI analysis")
+        debug_print("WARNING: GEMINI_API_KEY not set, skipping AI analysis")
     
     # Create email status record
     db_email_status = EmailStatus(resume_id=db_resume.id)
