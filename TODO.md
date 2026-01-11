@@ -1,16 +1,16 @@
-# TODO: Fix Resume Display by Extracting Contact Info
+# TODO: Automate Email Extraction from Resumes
 
 ## Backend Changes
-- [x] Update Resume model to add name, email, mobile columns
-- [x] Update ResumeResponse schema to include new fields
-- [x] Add contact info parsing method to PDFService
-- [x] Update upload endpoint to extract and store contact info
+- [ ] Update Resume model to add name, email, mobile columns
+- [ ] Update ResumeResponse schema to include new fields
+- [ ] Modify upload endpoint to extract and store contact info during upload
 
 ## Frontend Changes
-- [x] Update API types to include name, email, mobile
-- [x] Update ResumeCard component to display extracted info
+- [ ] Update API types to include name, email, mobile
+- [ ] Update ResumeCard component to display extracted info
+- [ ] Modify sendScreeningForm to use extracted email instead of prompt
 
 ## Testing & Validation
 - [ ] Test parsing with sample resume text
 - [ ] Verify database schema changes
-- [ ] Test UI display and overflow prevention
+- [ ] Test UI display and email automation

@@ -6,7 +6,7 @@
   --color-pink: #E331D0;
   --color-green: #10b981;
   --color-yellow: #f59e0b;
-  --color-red: #ef4444;
+  --color-red: #ee5c5c;
   --color-purple: #8b5cf6;
   --color-white: #FFFFFF;
   --color-black: #000000;
@@ -131,13 +131,13 @@ a {
 }
 
 .btn-danger {
-  background-color: var(--color-pink);
+  background-color: var(--color-red);
   color: var(--color-white);
 }
 
-.btn-danger:hover {
+/* .btn-danger:hover {
   background-color: var(--color-dark-velvet);
-}
+} */
 
 .card {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(131, 27, 132, 0.01) 100%);

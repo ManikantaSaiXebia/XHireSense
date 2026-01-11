@@ -32,6 +32,9 @@ export interface Resume {
   id: number;
   job_id: number;
   filename: string;
+  name: string | null;
+  email: string | null;
+  mobile: string | null;
   bucket: BucketType;
   uploaded_at: string;
 }

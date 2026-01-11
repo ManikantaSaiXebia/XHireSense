@@ -47,13 +47,13 @@ export default function JobDetailPage() {
     try {
       setLoading(true);
       setError(null);
-      
+
       const [jobData, resumesData, dashboardData] = await Promise.all([
         getJob(jobId),
         getResumes(jobId, activeTab === 'all' ? undefined : activeTab),
         getJobDashboard(jobId)
       ]);
-      
+
       setJob(jobData);
       setResumes(resumesData);
       setDashboard(dashboardData);
@@ -112,9 +112,13 @@ export default function JobDetailPage() {
     }
   }
 
-  async function handleSendScreeningForm(resumeId: number) {
-    const email = prompt('Enter candidate email address:');
-    if (!email) return;
+  async function handleSendScreeningForm(resumeId: number, extractedEmail?: string | null) {
+    let email = extractedEmail;
+
+    if (!email) {
+      email = prompt('Enter candidate email address:');
+      if (!email) return;
+    }
 
     try {
       await sendScreeningForm(resumeId, email);
@@ -242,9 +246,9 @@ export default function JobDetailPage() {
         </div>
 
         {showUpload && (
-          <div style={{ 
-            padding: '1.5rem', 
-            backgroundColor: '#f9fafb', 
+          <div style={{
+            padding: '1.5rem',
+            backgroundColor: '#f9fafb',
             borderRadius: '0.5rem',
             marginBottom: '1rem'
           }}>
@@ -334,7 +338,7 @@ function ResumeCard({
 }: {
   resume: ResumeWithAnalysis;
   onBucketChange: (resumeId: number, bucket: BucketType) => void;
-  onSendScreeningForm: (resumeId: number) => void;
+  onSendScreeningForm: (resumeId: number, extractedEmail?: string | null) => void;
   onDeleteResume: (resumeId: number) => void;
 }) {
   const getBucketBadgeClass = (bucket: string) => {
@@ -374,18 +378,48 @@ function ResumeCard({
           <span className={`badge ${getBucketBadgeClass(resume.resume.bucket)}`}>
             {getBucketLabel(resume.resume.bucket)}
           </span>
+          <span style={{ fontWeight: '600', paddingLeft: '10px' }}>{resume.resume.uploaded_at.replace("T", " ")}</span>
         </div>
+
+
         {resume.analysis && (
-          <div style={{ 
-            fontSize: '1.5rem', 
+          <div style={{
+            fontSize: '1.5rem',
             fontWeight: 'bold',
             color: resume.analysis.match_percentage >= 80 ? '#10b981' :
-                   resume.analysis.match_percentage >= 60 ? '#f59e0b' : '#ef4444'
+              resume.analysis.match_percentage >= 60 ? '#f59e0b' : '#ef4444'
           }}>
             {resume.analysis.match_percentage.toFixed(1)}%
           </div>
         )}
+
       </div>
+
+      {/* Contact Info */}
+      {(resume.resume.name || resume.resume.email || resume.resume.mobile) && (
+        <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#f8fafc', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
+          <div style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.5rem' }}>
+            Contact Information
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: '0.875rem', color: '#6b7280' }}>
+            {resume.resume.name && (
+              <div>
+                <span style={{ fontWeight: '500' }}>Name:</span> {resume.resume.name}
+              </div>
+            )}
+            {resume.resume.email && (
+              <div>
+                <span style={{ fontWeight: '500' }}>Email:</span> {resume.resume.email}
+              </div>
+            )}
+            {resume.resume.mobile && (
+              <div>
+                <span style={{ fontWeight: '500' }}>Phone:</span> {resume.resume.mobile}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {resume.analysis ? (
         <div>
@@ -404,9 +438,9 @@ function ResumeCard({
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                 {resume.analysis.matched_skills.map((skill, idx) => (
-                  <span key={idx} style={{ 
-                    padding: '0.25rem 0.75rem', 
-                    backgroundColor: '#d1fae5', 
+                  <span key={idx} style={{
+                    padding: '0.25rem 0.75rem',
+                    backgroundColor: '#d1fae5',
                     color: '#065f46',
                     borderRadius: '9999px',
                     fontSize: '0.875rem'
@@ -425,9 +459,9 @@ function ResumeCard({
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                 {resume.analysis.missing_skills.map((skill, idx) => (
-                  <span key={idx} style={{ 
-                    padding: '0.25rem 0.75rem', 
-                    backgroundColor: '#fef3c7', 
+                  <span key={idx} style={{
+                    padding: '0.25rem 0.75rem',
+                    backgroundColor: '#fef3c7',
                     color: '#92400e',
                     borderRadius: '9999px',
                     fontSize: '0.875rem'
@@ -446,9 +480,9 @@ function ResumeCard({
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                 {resume.analysis.bonus_skills.map((skill, idx) => (
-                  <span key={idx} style={{ 
-                    padding: '0.25rem 0.75rem', 
-                    backgroundColor: '#ede9fe', 
+                  <span key={idx} style={{
+                    padding: '0.25rem 0.75rem',
+                    backgroundColor: '#ede9fe',
                     color: '#5b21b6',
                     borderRadius: '9999px',
                     fontSize: '0.875rem'
@@ -478,7 +512,7 @@ function ResumeCard({
         <button
           className="btn btn-success"
           style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
-          onClick={() => onSendScreeningForm(resume.resume.id)}
+          onClick={() => onSendScreeningForm(resume.resume.id, resume.resume.email)}
           disabled={resume.email_status?.status === 'SENT' || resume.email_status?.status === 'RESPONSE_RECEIVED'}
         >
           {resume.email_status?.status === 'SENT' || resume.email_status?.status === 'RESPONSE_RECEIVED'
@@ -486,7 +520,7 @@ function ResumeCard({
             : 'Send Screening Form'}
         </button>
 
-        <select
+        {/* <select
           value={resume.resume.bucket}
           onChange={(e) => onBucketChange(resume.resume.id, e.target.value as BucketType)}
           style={{
@@ -500,7 +534,7 @@ function ResumeCard({
           <option value="STRONG_FIT">Strong Fit</option>
           <option value="POTENTIAL">Potential</option>
           <option value="REJECT">Reject</option>
-        </select>
+        </select> */}
 
         <button
           className="btn btn-danger"
@@ -512,10 +546,10 @@ function ResumeCard({
       </div>
 
       {resume.email_status && resume.email_status.status !== 'NOT_SENT' && (
-        <div style={{ 
-          marginTop: '0.5rem', 
-          fontSize: '0.875rem', 
-          color: '#6b7280' 
+        <div style={{
+          marginTop: '0.5rem',
+          fontSize: '0.875rem',
+          color: '#6b7280'
         }}>
           Email Status: {resume.email_status.status === 'SENT' ? 'Sent' : 'Response Received'}
         </div>

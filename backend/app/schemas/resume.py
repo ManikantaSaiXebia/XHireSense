@@ -10,6 +10,9 @@ class ResumeResponse(BaseModel):
     id: int
     job_id: int
     filename: str
+    name: Optional[str] = None
+    email: Optional[str] = None
+    mobile: Optional[str] = None
     bucket: BucketType
     uploaded_at: datetime
 

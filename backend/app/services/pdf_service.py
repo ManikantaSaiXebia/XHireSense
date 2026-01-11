@@ -50,24 +50,68 @@ class PDFService:
         email = None
         phone = None
 
-        lines = text.split('\n')
-        # Assume first non-empty line is the name
-        for line in lines:
-            line = line.strip()
-            if line and len(line) > 2 and not line.startswith('http') and '@' not in line and not re.match(r'\d{3}', line):
-                name = line
+        # Clean and normalize text
+        text = text.replace('\r', '\n').replace('\t', ' ')
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+
+        # Extract email first (more reliable)
+        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        email_match = re.search(email_pattern, text, re.IGNORECASE)
+        if email_match:
+            email = email_match.group().lower()
+
+        # Extract phone number
+        # More comprehensive phone patterns
+        phone_patterns = [
+            r'\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b',  # 123-456-7890, 123.456.7890, 123 456 7890
+            r'\b\(\d{3}\)\s*\d{3}[-.\s]?\d{4}\b',  # (123) 456-7890
+            r'\b\d{10}\b',  # 1234567890
+            r'\+\d{1,3}[-.\s]?\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b'  # +1-123-456-7890
+        ]
+
+        for pattern in phone_patterns:
+            phone_match = re.search(pattern, text)
+            if phone_match:
+                phone = phone_match.group()
+                # Clean up the phone number
+                phone = re.sub(r'[^\d+\-\(\)\.\s]', '', phone)
                 break
 
-        # Email regex
-        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
-        email_match = re.search(email_pattern, text)
-        if email_match:
-            email = email_match.group()
+        # Extract name - look for patterns that are likely to be names
+        # Skip lines that are clearly not names
+        skip_patterns = [
+            r'^https?://',  # URLs
+            r'^www\.',  # Websites
+            r'^\d+$',  # Just numbers
+            r'^[^\w\s]*$',  # Just symbols
+            r'^\s*(email|phone|mobile|tel|cell|contact|address|linkedin|github|portfolio)\s*:?\s*$',  # Labels
+            r'^\s*(objective|summary|experience|education|skills|projects|certifications)\s*:?\s*$',  # Section headers
+        ]
 
-        # Phone regex (simple pattern for US phones)
-        phone_pattern = r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b'
-        phone_match = re.search(phone_pattern, text)
-        if phone_match:
-            phone = phone_match.group()
+        for line in lines[:10]:  # Check first 10 lines
+            line_lower = line.lower()
+            should_skip = False
+
+            for pattern in skip_patterns:
+                if re.search(pattern, line_lower, re.IGNORECASE):
+                    should_skip = True
+                    break
+
+            if should_skip:
+                continue
+
+            # Check if line looks like a name (2-4 words, title case or mixed case)
+            words = line.split()
+            if 1 <= len(words) <= 4:
+                # Check if it contains title case words (likely a name)
+                has_title_case = any(word[0].isupper() and len(word) > 1 for word in words if word[0].isalpha())
+                # Not all caps (likely headers)
+                not_all_caps = not all(word.isupper() for word in words if len(word) > 1)
+                # Not too short
+                not_too_short = len(line) > 3
+
+                if has_title_case and not_all_caps and not_too_short:
+                    name = line
+                    break
 
         return name, email, phone

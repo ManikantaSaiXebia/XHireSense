@@ -21,6 +21,9 @@ class Resume(Base):
     job_id = Column(Integer, ForeignKey("jobs.id"), nullable=False, index=True)
     filename = Column(String(255), nullable=False)
     extracted_text = Column(Text, nullable=False)
+    name = Column(String(255), nullable=True)
+    email = Column(String(255), nullable=True)
+    mobile = Column(String(50), nullable=True)
     bucket = Column(SQLEnum(BucketType), nullable=False, default=BucketType.REJECT, index=True)
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
 

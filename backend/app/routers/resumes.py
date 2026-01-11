@@ -100,12 +100,19 @@ async def upload_resume(
                 failed.append({"filename": file.filename, "error": "Failed to extract text from PDF"})
                 continue
 
+            # Extract contact information
+            name, email, phone = pdf_service.extract_contact_info(extracted_text)
+            debug_print(f"DEBUG: Extracted contact info - name: {name}, email: {email}, phone: {phone}")
+
             # Create resume record (initially in REJECT bucket, will update after analysis)
             debug_print("DEBUG: Creating resume record in database...")
             db_resume = Resume(
                 job_id=job_id,
                 filename=file.filename,
                 extracted_text=extracted_text,
+                name=name,
+                email=email,
+                mobile=phone,
                 bucket=BucketType.REJECT
             )
             db.add(db_resume)
@@ -180,6 +187,9 @@ async def upload_resume(
                     id=db_resume.id,
                     job_id=db_resume.job_id,
                     filename=db_resume.filename,
+                    name=db_resume.name,
+                    email=db_resume.email,
+                    mobile=db_resume.mobile,
                     bucket=db_resume.bucket,
                     uploaded_at=db_resume.uploaded_at
                 ),
@@ -260,6 +270,9 @@ async def list_resumes(
                 id=resume.id,
                 job_id=resume.job_id,
                 filename=resume.filename,
+                name=resume.name,
+                email=resume.email,
+                mobile=resume.mobile,
                 bucket=resume.bucket,
                 uploaded_at=resume.uploaded_at
             ),
@@ -288,6 +301,9 @@ async def update_bucket(
         id=resume.id,
         job_id=resume.job_id,
         filename=resume.filename,
+        name=resume.name,
+        email=resume.email,
+        mobile=resume.mobile,
         bucket=resume.bucket,
         uploaded_at=resume.uploaded_at
     )
