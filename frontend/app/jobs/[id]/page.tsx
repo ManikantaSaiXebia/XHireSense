@@ -158,10 +158,10 @@ export default function JobDetailPage() {
   return (
     <div className="container">
       <header style={{ marginBottom: '2rem' }}>
-        <Link href="/" style={{ color: '#2563eb', marginBottom: '1rem', display: 'inline-block' }}>
+        <Link href="/" style={{ color: 'var(--color-velvet)', marginBottom: '1rem', display: 'inline-block' }}>
           ← Back to Jobs
         </Link>
-        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+        <h1 style={{ fontSize: 'var(--font-size-headline)', fontWeight: 'var(--font-weight-medium)', marginBottom: '0.5rem' }}>
           {job.title}
         </h1>
       </header>
@@ -176,40 +176,40 @@ export default function JobDetailPage() {
           </h2>
           <div className="grid grid-3">
             <div>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#2563eb' }}>
+              <div style={{ fontSize: 'var(--font-size-display)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-velvet)' }}>
                 {dashboard.total_resumes}
               </div>
-              <div style={{ color: '#6b7280' }}>Total Resumes</div>
+              <div style={{ color: 'var(--color-blue-dark)' }}>Total Resumes</div>
             </div>
             <div>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#10b981' }}>
+              <div style={{ fontSize: 'var(--font-size-display)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-green)' }}>
                 {dashboard.strong_fit_count}
               </div>
-              <div style={{ color: '#6b7280' }}>Strong Fit</div>
+              <div style={{ color: 'var(--color-blue-dark)' }}>Strong Fit</div>
             </div>
             <div>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#f59e0b' }}>
+              <div style={{ fontSize: 'var(--font-size-display)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-yellow)' }}>
                 {dashboard.potential_count}
               </div>
-              <div style={{ color: '#6b7280' }}>Potential</div>
+              <div style={{ color: 'var(--color-blue-dark)' }}>Potential</div>
             </div>
             <div>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#ef4444' }}>
+              <div style={{ fontSize: 'var(--font-size-display)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-red)' }}>
                 {dashboard.reject_count}
               </div>
-              <div style={{ color: '#6b7280' }}>Reject</div>
+              <div style={{ color: 'var(--color-blue-dark)' }}>Reject</div>
             </div>
             <div>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#2563eb' }}>
+              <div style={{ fontSize: 'var(--font-size-display)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-velvet)' }}>
                 {dashboard.average_match_percentage?.toFixed(1) ?? 'N/A'}%
               </div>
-              <div style={{ color: '#6b7280' }}>Avg Match</div>
+              <div style={{ color: 'var(--color-blue-dark)' }}>Avg Match</div>
             </div>
             <div>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#8b5cf6' }}>
+              <div style={{ fontSize: 'var(--font-size-display)', fontWeight: 'var(--font-weight-bold)', color: 'var(--color-purple)' }}>
                 {dashboard.pending_screening_responses}
               </div>
-              <div style={{ color: '#6b7280' }}>Pending Responses</div>
+              <div style={{ color: 'var(--color-blue-dark)' }}>Pending Responses</div>
             </div>
           </div>
         </div>

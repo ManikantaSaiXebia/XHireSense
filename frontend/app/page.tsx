@@ -47,17 +47,17 @@ export default function Home() {
 
   return (
     <div className="container">
-      <header style={{ marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '2px solid #e5e7eb' }}>
-        <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+      <header style={{ marginBottom: '2rem', paddingBottom: '2rem', borderBottom: '2px solid var(--color-blue-dark)' }}>
+        <h1 style={{ fontSize: 'var(--font-size-headline)', fontWeight: 'var(--font-weight-medium)', marginBottom: '0.5rem' }}>
           XHireSense
         </h1>
-        <p style={{ color: '#6b7280', fontSize: '1.125rem' }}>
+        <p style={{ color: 'var(--color-blue-dark)', fontSize: 'var(--font-size-body)' }}>
           Explainable AI for Smarter Hiring Decisions
         </p>
       </header>
 
       <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2 style={{ fontSize: '1.875rem', fontWeight: '600' }}>Job Postings</h2>
+        <h2 style={{ fontSize: 'var(--font-size-headline)', fontWeight: 'var(--font-weight-medium)' }}>Job Postings</h2>
         <Link href="/jobs" className="btn btn-primary">
           Create New Job
         </Link>
@@ -69,7 +69,7 @@ export default function Home() {
         <div className="loading">Loading jobs...</div>
       ) : jobs.length === 0 ? (
         <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-          <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
+          <p style={{ color: 'var(--color-blue-dark)', marginBottom: '1.5rem' }}>
             No jobs yet. Create your first job posting to get started.
           </p>
           <Link href="/jobs" className="btn btn-primary">
@@ -112,7 +112,7 @@ export default function Home() {
                         zIndex: 10
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#fee2e2';
+                        e.currentTarget.style.backgroundColor = 'var(--color-pink)';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = 'transparent';
@@ -122,15 +122,15 @@ export default function Home() {
                     >
                       🗑
                     </button>
-                    <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '0.5rem', paddingRight: '2.5rem' }}>
+                    <h3 style={{ fontSize: 'var(--font-size-subtitle)', fontWeight: 'var(--font-weight-medium)', marginBottom: '0.5rem', paddingRight: '2.5rem' }}>
                       {job.title}
                     </h3>
-                    <p style={{ color: '#6b7280', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                    <p style={{ color: 'var(--color-blue-dark)', fontSize: 'var(--font-size-caption)', marginBottom: '1rem' }}>
                       Created {new Date(job.created_at).toLocaleDateString()}
                     </p>
-                    <div style={{ 
-                      color: '#4b5563', 
-                      fontSize: '0.9rem',
+                    <div style={{
+                      color: 'var(--color-black)',
+                      fontSize: 'var(--font-size-body)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       display: '-webkit-box',
