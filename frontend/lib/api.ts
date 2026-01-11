@@ -96,7 +96,11 @@ export async function deleteJob(id: number): Promise<void> {
   });
   
   if (!response.ok) {
-    throw new Error('Failed to delete job');
+    if (response.status === 404) {
+      throw new Error('Job posting not found');
+    }
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Failed to delete job posting');
   }
 }
 

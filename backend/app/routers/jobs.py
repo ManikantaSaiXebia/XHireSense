@@ -38,9 +38,18 @@ async def delete_job(job_id: int, db: Session = Depends(get_db)):
     """Delete a job and all associated resumes"""
     job = db.query(Job).filter(Job.id == job_id).first()
     if not job:
-        raise HTTPException(status_code=404, detail="Job not found")
-    db.delete(job)
-    db.commit()
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Job not found")
+    
+    try:
+        db.delete(job)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete job: {str(e)}"
+        )
+    
     return None
 
 @router.get("/{job_id}/dashboard", response_model=JobDashboardResponse)
