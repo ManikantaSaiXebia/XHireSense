@@ -95,7 +95,7 @@ async def upload_resume(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to extract text from PDF"
         )
-    
+
     # Create resume record (initially in REJECT bucket, will update after analysis)
     debug_print("DEBUG: Creating resume record in database...")
     db_resume = Resume(

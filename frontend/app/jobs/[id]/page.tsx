@@ -277,7 +277,7 @@ export default function JobDetailPage() {
             No resumes found. Upload resumes to get started.
           </div>
         ) : (
-          <div className="grid grid-2">
+          <div className="grid grid-1">
             {resumes.map((item) => (
               <ResumeCard
                 key={item.resume.id}
@@ -335,6 +335,7 @@ function ResumeCard({
           <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.5rem' }}>
             {resume.resume.filename}
           </h3>
+
           <span className={`badge ${getBucketBadgeClass(resume.resume.bucket)}`}>
             {getBucketLabel(resume.resume.bucket)}
           </span>
