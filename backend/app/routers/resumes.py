@@ -91,7 +91,9 @@ async def upload_resume(
                     reasoning=match_result.reasoning
                 )
                 db.add(db_analysis)
+                # Commit both bucket update and analysis
                 db.commit()
+                db.refresh(db_resume)
                 db.refresh(db_analysis)
                 analysis_result = db_analysis
         except Exception as e:
