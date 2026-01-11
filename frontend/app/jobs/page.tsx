@@ -35,10 +35,10 @@ export default function CreateJobPage() {
   return (
     <div className="container">
       <header style={{ marginBottom: '2rem' }}>
-        <Link href="/" style={{ color: '#2563eb', marginBottom: '1rem', display: 'inline-block' }}>
+        <Link href="/" style={{ color: 'var(--color-velvet)', marginBottom: '1rem', display: 'inline-block' }}>
           ← Back to Jobs
         </Link>
-        <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+        <h1 style={{ fontSize: 'var(--font-size-headline)', fontWeight: 'var(--font-weight-medium)', marginBottom: '0.5rem' }}>
           Create New Job Posting
         </h1>
       </header>
