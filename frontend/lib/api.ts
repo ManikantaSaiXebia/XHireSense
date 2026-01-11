@@ -203,10 +203,20 @@ export async function updateEmailStatus(
     },
     body: JSON.stringify({ status, form_link: formLink }),
   });
-  
+
   if (!response.ok) {
     throw new Error('Failed to update email status');
   }
-  
+
   return response.json();
+}
+
+export async function deleteResume(resumeId: number): Promise<void> {
+  const response = await fetch(`${API_URL}/api/resumes/${resumeId}`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to delete resume');
+  }
 }

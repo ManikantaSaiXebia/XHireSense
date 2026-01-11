@@ -330,17 +330,17 @@ async def update_email_status(
     email_status = db.query(EmailStatus).filter(EmailStatus.resume_id == resume_id).first()
     if not email_status:
         raise HTTPException(status_code=404, detail="Email status not found")
-    
+
     email_status.status = status_update.status
     if status_update.form_link:
         email_status.form_link = status_update.form_link
-    
+
     if status_update.status == EmailStatusEnum.RESPONSE_RECEIVED:
         email_status.response_received_at = datetime.now(timezone.utc)
-    
+
     db.commit()
     db.refresh(email_status)
-    
+
     return EmailStatusResponse(
         id=email_status.id,
         status=email_status.status,
@@ -348,3 +348,19 @@ async def update_email_status(
         sent_at=email_status.sent_at,
         response_received_at=email_status.response_received_at
     )
+
+@router.delete("/{resume_id}")
+async def delete_resume(
+    resume_id: int,
+    db: Session = Depends(get_db)
+):
+    """Delete a resume and all associated data"""
+    resume = db.query(Resume).filter(Resume.id == resume_id).first()
+    if not resume:
+        raise HTTPException(status_code=404, detail="Resume not found")
+
+    # Delete the resume (cascade will handle related records)
+    db.delete(resume)
+    db.commit()
+
+    return {"message": "Resume deleted successfully"}
