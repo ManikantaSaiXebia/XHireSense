@@ -112,7 +112,7 @@ export default function Home() {
                         zIndex: 10
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = 'var(--color-pink)';
+                        e.currentTarget.style.backgroundColor = 'var(--color-red)';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.backgroundColor = 'transparent';
@@ -164,7 +164,8 @@ export default function Home() {
               <div className="card" style={{
                 maxWidth: '400px',
                 width: '90%',
-                margin: '0 auto'
+                margin: '0 auto',
+                backgroundColor: 'white'
               }}
               onClick={(e) => e.stopPropagation()}
               >
