@@ -69,32 +69,48 @@ export async function createJob(title: string, description: string): Promise<Job
     },
     body: JSON.stringify({ title, description }),
   });
-  
+
   if (!response.ok) {
     throw new Error('Failed to create job');
   }
-  
+
   return response.json();
 }
 
 export async function getJobs(): Promise<Job[]> {
   const response = await fetch(`${API_URL}/api/jobs/`);
-  
+
   if (!response.ok) {
     throw new Error('Failed to fetch jobs');
   }
-  
+
   const data = await response.json();
   return data.jobs;
 }
 
 export async function getJob(id: number): Promise<Job> {
   const response = await fetch(`${API_URL}/api/jobs/${id}`);
-  
+
   if (!response.ok) {
     throw new Error('Failed to fetch job');
   }
-  
+
+  return response.json();
+}
+
+export async function updateJob(id: number, updates: Partial<{ title: string; description: string }>): Promise<Job> {
+  const response = await fetch(`${API_URL}/api/jobs/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(updates),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to update job');
+  }
+
   return response.json();
 }
 
@@ -102,7 +118,7 @@ export async function deleteJob(id: number): Promise<void> {
   const response = await fetch(`${API_URL}/api/jobs/${id}`, {
     method: 'DELETE',
   });
-  
+
   if (!response.ok) {
     if (response.status === 404) {
       throw new Error('Job posting not found');
@@ -114,11 +130,11 @@ export async function deleteJob(id: number): Promise<void> {
 
 export async function getJobDashboard(jobId: number): Promise<JobDashboard> {
   const response = await fetch(`${API_URL}/api/jobs/${jobId}/dashboard`);
-  
+
   if (!response.ok) {
     throw new Error('Failed to fetch dashboard');
   }
-  
+
   return response.json();
 }
 
@@ -175,16 +191,16 @@ export async function getResumes(
   const params = new URLSearchParams();
   if (bucket) params.append('bucket', bucket);
   if (minMatch !== undefined) params.append('min_match', minMatch.toString());
-  
+
   const queryString = params.toString();
   const url = `${API_URL}/api/resumes/job/${jobId}${queryString ? `?${queryString}` : ''}`;
-  
+
   const response = await fetch(url);
-  
+
   if (!response.ok) {
     throw new Error('Failed to fetch resumes');
   }
-  
+
   return response.json();
 }
 
@@ -199,11 +215,11 @@ export async function updateBucket(
     },
     body: JSON.stringify({ bucket }),
   });
-  
+
   if (!response.ok) {
     throw new Error('Failed to update bucket');
   }
-  
+
   return response.json();
 }
 
@@ -213,16 +229,16 @@ export async function sendScreeningForm(
 ): Promise<EmailStatus> {
   const formData = new FormData();
   formData.append('candidate_email', candidateEmail);
-  
+
   const response = await fetch(`${API_URL}/api/resumes/${resumeId}/send-screening-form`, {
     method: 'POST',
     body: formData,
   });
-  
+
   if (!response.ok) {
     throw new Error('Failed to send screening form');
   }
-  
+
   return response.json();
 }
 

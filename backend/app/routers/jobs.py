@@ -1,9 +1,10 @@
+from app.services.resume_parser import ResumeParser
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
 from app.models.job import Job
-from app.schemas.job import JobCreate, JobResponse, JobListResponse
+from app.schemas.job import JobCreate, JobResponse, JobListResponse, JobUpdate
 from app.schemas.dashboard import JobDashboardResponse
 from app.models.resume import Resume, ResumeAnalysis, EmailStatus, BucketType, EmailStatusEnum
 from sqlalchemy import func, case
@@ -32,6 +33,27 @@ async def get_job(job_id: int, db: Session = Depends(get_db)):
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
+
+@router.put("/{job_id}", response_model=JobResponse)
+async def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)):
+    """Update a job posting and re-evaluate all associated resumes"""
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_codeew=404, detail="Job not found")
+
+    # Update job fields if provided
+    update_data = job_update.dict(exclude_unset=True)
+    if update_data:
+        for field, value in update_data.items():
+            setattr(job, field, value)
+
+    # Commit job update
+    db.commit()
+    db.refresh(job)
+
+    ResumeParser.reevaluateAll(job_id, job_update.description)
+    return job
+
 
 @router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_job(job_id: int, db: Session = Depends(get_db)):

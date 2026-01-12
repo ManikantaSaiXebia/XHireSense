@@ -12,6 +12,7 @@ import {
   sendScreeningForm,
   deleteResume,
   Job,
+  updateJob,
   ResumeWithAnalysis,
   JobDashboard,
   BucketType,
@@ -263,9 +264,13 @@ export default function JobDetailPage() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showUpload, setShowUpload] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingJob, setEditingJob] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const [uploadResults, setUploadResults] = useState<ResumeBatchUploadResponse | null>(null);
   const [confirmDeleteResumeId, setConfirmDeleteResumeId] = useState<number | null>(null);
   const [deletingResumeId, setDeletingResumeId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({ title: '', description: '' });
 
   useEffect(() => {
     if (jobId) {
@@ -379,6 +384,51 @@ export default function JobDetailPage() {
     }
   }
 
+  function handleOpenEditModal() {
+    if (job) {
+      setEditForm({ title: job.title, description: job.description });
+      setShowEditModal(true);
+      setEditError(null);
+    }
+  }
+
+  function handleCloseEditModal() {
+    setShowEditModal(false);
+    setEditForm({ title: '', description: '' });
+    setEditError(null);
+  }
+
+  async function handleEditSubmit(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!editForm.title.trim() || !editForm.description.trim()) {
+      setEditError('Please fill in all fields');
+      return;
+    }
+
+    try {
+      setEditingJob(true);
+      setEditError(null);
+
+      const updates: Partial<{ title: string; description: string }> = {};
+      if (editForm.title !== job?.title) updates.title = editForm.title;
+      if (editForm.description !== job?.description) updates.description = editForm.description;
+
+      if (Object.keys(updates).length === 0) {
+        setEditError('No changes detected');
+        return;
+      }
+
+      await updateJob(jobId, updates);
+      setShowEditModal(false);
+      await loadData(); // Refresh all data including dashboard and resumes
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Failed to update job');
+    } finally {
+      setEditingJob(false);
+    }
+  }
+
   if (loading && !job) {
     return (
       <div className="container">
@@ -407,6 +457,18 @@ export default function JobDetailPage() {
         <h1 style={{ fontSize: 'var(--font-size-headline)', fontWeight: 'var(--font-weight-medium)', marginBottom: '0.5rem' }}>
           {job.title}
         </h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+          <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>
+            {job.title}
+          </h1>
+          <button
+            className="btn btn-secondary"
+            onClick={handleOpenEditModal}
+            style={{ fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+          >
+            ✏️ Edit Job
+          </button>
+        </div>
       </header>
 
       {error && <div className="error">{error}</div>}
@@ -580,7 +642,7 @@ export default function JobDetailPage() {
           justifyContent: 'center',
           zIndex: 1000
         }}
-        onClick={() => setConfirmDeleteResumeId(null)}
+          onClick={() => setConfirmDeleteResumeId(null)}
         >
           <div className="card" style={{
             maxWidth: '400px',
@@ -588,7 +650,7 @@ export default function JobDetailPage() {
             margin: '0 auto',
             backgroundColor: 'white'
           }}
-          onClick={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem' }}>
               Confirm Deletion
@@ -612,6 +674,102 @@ export default function JobDetailPage() {
                 {deletingResumeId === confirmDeleteResumeId ? 'Deleting...' : 'Delete'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Edit Job Modal */}
+      {showEditModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}
+          onClick={handleCloseEditModal}
+        >
+          <div className="card" style={{
+            maxWidth: '600px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto'
+          }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1.5rem' }}>
+              Edit Job Posting
+            </h2>
+
+            {editError && <div className="error" style={{ marginBottom: '1rem' }}>{editError}</div>}
+
+            <form onSubmit={handleEditSubmit}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label htmlFor="edit-title" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                  Job Title
+                </label>
+                <input
+                  id="edit-title"
+                  type="text"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    fontSize: '1rem'
+                  }}
+                  disabled={editingJob}
+                  required
+                />
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label htmlFor="edit-description" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                  Job Description
+                </label>
+                <textarea
+                  id="edit-description"
+                  value={editForm.description}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+                  rows={8}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '0.5rem',
+                    fontSize: '1rem',
+                    fontFamily: 'inherit',
+                    resize: 'vertical'
+                  }}
+                  disabled={editingJob}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={handleCloseEditModal}
+                  disabled={editingJob}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={editingJob}
+                >
+                  {editingJob ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
